@@ -5,6 +5,20 @@ const NORMAL_Q=Q.filter(q=>!isVisualQ(q));
 const VISUAL_Q=Q.filter(isVisualQ);
 function safeVisuals(q){return (q.visualImages?.length?q.visualImages:(q.visualImage?[q.visualImage]:[])).filter(src=>!/answer|correct|marked/i.test(src));}
 function topicCount(arr,t){return arr.filter(q=>q.topic===t).length;}
+const MOCKS_PER_TOPIC=[3,3,2,3,1];
+function splitTopicPool(topic){
+  const pool=NORMAL_Q.filter(q=>q.topic===topic);
+  const topicIndex=topics.indexOf(topic);
+  const mockCount=MOCKS_PER_TOPIC[topicIndex]||1;
+  const base=Math.floor(pool.length/mockCount), extra=pool.length%mockCount;
+  let offset=0;
+  return Array.from({length:mockCount},(_,i)=>{
+    const size=base+(i<extra?1:0);
+    const part=pool.slice(offset,offset+size);
+    offset+=size;
+    return part;
+  });
+}
 
 const $=s=>document.querySelector(s); const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 function shuffle(a){a=[...a];for(let i=a.length-1;i;i--){let j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
@@ -34,16 +48,24 @@ function shell(content){document.body.innerHTML=`<div class="wrap"><div class="b
 function home(){clearInterval(timer);if(!student){studentForm();return;}shell(`<div class="studentbar">Signed in as <b>${esc(student.name)}</b> • ${esc(student.email)} <button class="linkbtn" onclick="changeStudent()">Change</button></div><section class="hero"><span class="badge">Microsoft Azure Administrator • ${Q.length.toLocaleString()} source records</span><h1>AZ-104 Practice Hub</h1><p>Questions are split into two clean pools: Normal (Single Select + Multi-select) and Visual (HOTSPOT, Drag & Drop, Exhibit/Table/Image-based). Topic mocks use only the Normal pool.</p><div class="stats"><div class="stat"><strong>${Q.length}</strong>Total</div><div class="stat"><strong>${NORMAL_Q.length}</strong>Normal</div><div class="stat"><strong>${VISUAL_Q.length}</strong>Visual</div><div class="stat"><strong>5</strong>Topics</div></div></section>
 <section class="splitgrid"><div class="card splitcard"><span class="badge">Section 1</span><h2>Normal Questions</h2><p class="muted">Single Select + Multi-select only</p><div class="countlist">${topics.map(t=>`<div><span>${esc(t)}</span><strong>${topicCount(NORMAL_Q,t)}</strong></div>`).join('')}<div class="totalrow"><span>Total Normal Questions</span><strong>${NORMAL_Q.length}</strong></div></div><div class="toolbar"><button class="btn" onclick="normalBank()">View Normal Questions</button></div></div>
 <div class="card splitcard"><span class="badge">Section 2</span><h2>Visual Questions</h2><p class="muted">HOTSPOT + Drag & Drop + Exhibit/Table/Image-based</p><div class="countlist">${topics.map(t=>`<div><span>${esc(t)}</span><strong>${topicCount(VISUAL_Q,t)}</strong></div>`).join('')}<div class="totalrow"><span>Total Visual Questions</span><strong>${VISUAL_Q.length}</strong></div></div><div class="toolbar"><button class="btn secondary" onclick="visualPractice()">View Visual Questions</button></div></div></section>
-<h2 class="sectiontitle">Normal Topic Mocks</h2><div class="grid" id="cards"></div>`);let c=$('#cards');topics.forEach(t=>{let n=topicCount(NORMAL_Q,t);c.innerHTML+=`<div class="card"><span class="badge">${n} normal questions</span><h3>${esc(t)}</h3><p class="muted">Random ${Math.min(50,n)} • Normal questions only • 60 minutes</p><button class="btn" onclick='start(${JSON.stringify(t)})'>Start Topic Mock</button></div>`});c.innerHTML+=`<div class="card"><span class="badge">${NORMAL_Q.length} normal questions</span><h3>Overall AZ-104 Mock</h3><p class="muted">Random 50 from Normal pool only</p><button class="btn good" onclick="start(null)">Start Overall Mock</button></div>`}
-function start(topic){
-  let pool=topic ? NORMAL_Q.filter(x=>x.topic===topic) : NORMAL_Q;
+<h2 class="sectiontitle">Normal Topic Mocks</h2><div class="grid" id="cards"></div>`);let c=$('#cards');topics.forEach((t,ti)=>{let pools=splitTopicPool(t);pools.forEach((pool,mi)=>{let examSize=Math.min(50,pool.length);c.innerHTML+=`<div class="card"><span class="badge">${pool.length} assigned questions</span><h3>${esc(t)} — Mock ${mi+1}</h3><p class="muted">Random ${examSize} from this mock pool • ${examSize} marks • 60 minutes</p><button class="btn" onclick='start(${JSON.stringify(t)},${mi})'>Start Mock ${mi+1}</button></div>`})});c.innerHTML+=`<div class="card"><span class="badge">${NORMAL_Q.length} normal questions</span><h3>Overall AZ-104 Mock</h3><p class="muted">Random 50 • 50 marks • 60 minutes</p><button class="btn good" onclick="start(null)">Start Overall Mock</button></div>`}
+function start(topic,mockIndex=null){
+  let pool,examName;
+  if(topic && mockIndex!==null){
+    const pools=splitTopicPool(topic);
+    pool=pools[mockIndex]||[];
+    examName=`${topic} — Mock ${mockIndex+1}`;
+  }else{
+    pool=topic ? NORMAL_Q.filter(x=>x.topic===topic) : NORMAL_Q;
+    examName=topic||'Overall AZ-104 Mock';
+  }
   let qs=shuffle(pool).slice(0,Math.min(50,pool.length));
-  state={topic,qs,i:0,answers:{},review:{},secs:3600,startedAt:Date.now()};
+  state={topic,mockIndex,examName,qs,i:0,answers:{},review:{},secs:3600,startedAt:Date.now()};
   isSubmitting=false;
   renderExam(); timer=setInterval(()=>{state.secs--;let e=$('#time');if(e)e.textContent=fmt(state.secs);if(state.secs<=0)finalSubmit()},1000)
 }
 function fmt(s){return `${String(Math.max(0,Math.floor(s/60))).padStart(2,'0')}:${String(Math.max(0,s%60)).padStart(2,'0')}`}
-function renderExam(){if(!state||state.submitted)return;let q=state.qs[state.i],a=state.answers[q.id];document.body.innerHTML=`<div class="topbar"><div class="topinner"><b>AZ-104 ${state.topic?'• '+esc(state.topic):'• Overall Mock'}</b><div><span id="time">${fmt(state.secs)}</span> &nbsp; <button class="btn secondary" onclick="confirmSubmit()">Submit</button></div></div></div><div class="wrap exam"><main class="card qcard"><div class="source">Question ${state.i+1}/${state.qs.length} • ${esc(q.source)} • Source Q${q.qno}</div><h2>Question ${state.i+1}</h2><div class="qtext">${esc(q.question)}</div>
+function renderExam(){if(!state||state.submitted)return;let q=state.qs[state.i],a=state.answers[q.id];document.body.innerHTML=`<div class="topbar"><div class="topinner"><b>AZ-104 • ${esc(state.examName||state.topic||'Overall Mock')}</b><div><span id="time">${fmt(state.secs)}</span> &nbsp; <button class="btn secondary" onclick="confirmSubmit()">Submit</button></div></div></div><div class="wrap exam"><main class="card qcard"><div class="source">Question ${state.i+1}/${state.qs.length} • ${esc(q.source)} • Source Q${q.qno}</div><h2>Question ${state.i+1}</h2><div class="qtext">${esc(q.question)}</div>
 ${q.visualImages?.length?`<div class="visualWrap mockVisual">${q.visualImages.map((src,i)=>`<img class="visualQ" src="${src}" alt="Question visual ${i+1} for ${esc(q.id)}">`).join('')}<div class="source">Question visuals • source answer hidden</div></div>`:(q.visualImage?`<div class="visualWrap mockVisual"><img class="visualQ" src="${q.visualImage}" alt="Question visual"><div class="source">Question visual • answer hidden</div></div>`:'')}
 <div id="opts">${optionsHtml(q,a)}</div><div class="toolbar"><button class="btn secondary" onclick="prev()">← Previous</button><button class="btn secondary" onclick="toggleReview()">${state.review[q.id]?'✓ Marked':'Mark for review'}</button><button class="btn" onclick="next()">Next →</button></div></main><aside class="card side"><h3>Question Palette</h3><div class="palette">${state.qs.map((x,i)=>`<button class="pbtn ${i===state.i?'current':''} ${state.answers[x.id]!==undefined?'done':''} ${state.review[x.id]?'review':''}" onclick="go(${i})">${i+1}</button>`).join('')}</div><p class="muted">Outlined = current<br>Green border = answered<br>Gold bar = review</p></aside></div>`}
 function optionsHtml(q,a){if(!q.options?.length)return q.visualImage
@@ -92,7 +114,7 @@ async function finalSubmit(){
   let total=state.qs.length, wrong=answered-correct, unanswered=total-answered;
   let pct=total?Math.round(correct/total*100):0;
   const timeTaken=Math.max(0,3600-state.secs);
-  const resultPayload={attemptId:(crypto.randomUUID?crypto.randomUUID():Date.now()+'-'+Math.random().toString(16).slice(2)),submittedAt:new Date().toISOString(),name:student?.name||'',email:student?.email||'',exam:state.topic||'Overall AZ-104 Mock',score:correct,total,percentage:pct,correct,wrong,unanswered,timeTakenSeconds:timeTaken,timeTakenMinutes:Math.ceil(timeTaken/60)};
+  const resultPayload={attemptId:(crypto.randomUUID?crypto.randomUUID():Date.now()+'-'+Math.random().toString(16).slice(2)),submittedAt:new Date().toISOString(),name:student?.name||'',email:student?.email||'',exam:state.examName||state.topic||'Overall AZ-104 Mock',score:correct,total,percentage:pct,correct,wrong,unanswered,timeTakenSeconds:timeTaken,timeTakenMinutes:Math.ceil(timeTaken/60)};
   const resultSavePromise=sendResult(resultPayload);
   resultSavePromise.catch(()=>{});
   shell(`<section class="hero resultHero"><span class="badge">Mock completed</span><h1>${correct}/${total}</h1><p>${pct}% score</p>
