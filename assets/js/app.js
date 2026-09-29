@@ -93,16 +93,16 @@ async function finalSubmit(){
   let pct=total?Math.round(correct/total*100):0;
   const timeTaken=Math.max(0,3600-state.secs);
   const resultPayload={attemptId:(crypto.randomUUID?crypto.randomUUID():Date.now()+'-'+Math.random().toString(16).slice(2)),submittedAt:new Date().toISOString(),name:student?.name||'',email:student?.email||'',exam:state.topic||'Overall AZ-104 Mock',score:correct,total,percentage:pct,correct,wrong,unanswered,timeTakenSeconds:timeTaken,timeTakenMinutes:Math.ceil(timeTaken/60)};
-  shell(`<section class="hero submitting"><span class="badge">Submitting mock</span><h1>Finishing your exam…</h1><p>Please wait while your result is saved. Answers and navigation are now locked.</p></section>`);
-  const saveStatus=await sendResult(resultPayload);
-  shell(`<section class="hero"><span class="badge">Mock completed</span><h1>${correct}/${total}</h1><p>${pct}% score</p>
+  const resultSavePromise=sendResult(resultPayload);
+  resultSavePromise.catch(()=>{});
+  shell(`<section class="hero resultHero"><span class="badge">Mock completed</span><h1>${correct}/${total}</h1><p>${pct}% score</p>
   <div class="stats">
     <div class="stat"><strong>${correct}</strong>Correct</div>
     <div class="stat"><strong>${wrong}</strong>Wrong</div>
     <div class="stat"><strong>${unanswered}</strong>Unanswered</div>
     <div class="stat"><strong>${Object.values(state.review).filter(Boolean).length}</strong>Marked Review</div>
   </div>
-  <p class="${saveStatus.saved?'goodtxt':'warntxt'}"><b>${saveStatus.saved?'Result sent to Google Sheet.':'Result not sent: Google Sheet connection is not configured or unavailable.'}</b></p><div class="toolbar"><button class="btn" onclick="home()">Dashboard</button><button class="btn secondary" onclick="reviewResult()">Review Answers</button></div></section>`)
+  <div class="toolbar"><button class="btn" onclick="home()">Dashboard</button><button class="btn secondary" onclick="reviewResult()">Review Answers</button></div></section>`)
 }
 function reviewResult(){shell(`<div class="toolbar"><button class="btn" onclick="home()">Dashboard</button></div><h1>Answer Review</h1>${state.qs.map((q,i)=>{let a=state.answers[q.id],ok=same(a,q.answer);return `<div class="card resultRow"><div class="source">#${i+1} • ${esc(q.source)} • Q${q.qno} • ${esc(q.topic)}</div><h3>${esc(q.question).slice(0,700)}</h3>${q.visualImages?.length?`<div class="visualWrap">${q.visualImages.map(src=>`<img class="visualQ" src="${src}" alt="Question visual">`).join('')}</div>`:(q.visualImage?`<div class="visualWrap"><img class="visualQ" src="${q.visualImage}" alt="Question visual"></div>`:'')}<p class="${ok?'goodtxt':'badtxt'}"><b>Your answer:</b> ${esc(ansText(q,a))}</p><p class="goodtxt"><b>Source answer:</b> ${esc(ansText(q,q.answer))}</p>${q.verifiedCorrection?`<p class="warntxt"><b>Verified correction:</b> ${esc(q.verifiedCorrection.answer)} — ${esc(q.verifiedCorrection.reason)}</p>`:''}<p class="muted">${esc(q.explanation||'No text explanation extracted from source.')}</p></div>`}).join('')}`)}
 function normalBank(){shell(`<div class="toolbar"><button class="btn" onclick="home()">Dashboard</button><select id="filter" class="select" onchange="renderNormalBank()"><option value="">All topics (${NORMAL_Q.length})</option>${topics.map(t=>`<option value="${esc(t)}">${esc(t)} (${topicCount(NORMAL_Q,t)})</option>`).join('')}</select></div><h1>Normal Question Bank</h1><p class="muted">Single Select + Multi-select only • ${NORMAL_Q.length} questions</p><div id="bank"></div>`);renderNormalBank()}
