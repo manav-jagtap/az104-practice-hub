@@ -28,7 +28,7 @@ let isSubmitting=false;
 const RESULT_ENDPOINT='https://script.google.com/macros/s/AKfycbxAi-fbSnfFk-sAPhiJspYVQq9yuYH6iCwX4OKIKGmIe_KK0vBNttuDnz0vaekkISnJ/exec';
 let student=JSON.parse(localStorage.getItem('az104_student')||'null');
 function studentForm(){
-  shell(`<section class="hero"><span class="badge">Student Details</span><h1>Before you start</h1><p>Enter your name and email once. These details will be attached to your mock-test results.</p><div class="card student-card"><label>Full Name</label><input id="studentName" class="textinput" value="${esc(student?.name||'')}" placeholder="e.g. Rahul Patil"><label>Email</label><input id="studentEmail" class="textinput" type="email" value="${esc(student?.email||'')}" placeholder="e.g. rahul@gmail.com"><div class="toolbar"><button class="btn" onclick="saveStudent()">Continue</button></div><p class="muted">Your result is sent only when you submit a mock test.</p></div></section>`)
+  shell(`<section class="hero"><span class="badge">Student Details</span><h1>Before you start</h1><p>Enter your name and email once. These details will be attached to your mock-test results.</p><div class="card student-card"><label>Full Name</label><input id="studentName" class="textinput" value="${esc(student?.name||'')}" placeholder="e.g. Manav Jagtap"><label>Email</label><input id="studentEmail" class="textinput" type="email" value="${esc(student?.email||'')}" placeholder="e.g. manav@gmail.com"><div class="toolbar"><button class="btn" onclick="saveStudent()">Continue</button></div><p class="muted">Your result is sent only when you submit a mock test.</p></div></section>`)
 }
 function saveStudent(){
   const name=$('#studentName').value.trim(),email=$('#studentEmail').value.trim();
