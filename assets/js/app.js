@@ -43,14 +43,14 @@ function start(topic){
   renderExam(); timer=setInterval(()=>{state.secs--;let e=$('#time');if(e)e.textContent=fmt(state.secs);if(state.secs<=0)finalSubmit()},1000)
 }
 function fmt(s){return `${String(Math.max(0,Math.floor(s/60))).padStart(2,'0')}:${String(Math.max(0,s%60)).padStart(2,'0')}`}
-function renderExam(){let q=state.qs[state.i],a=state.answers[q.id];document.body.innerHTML=`<div class="topbar"><div class="topinner"><b>AZ-104 ${state.topic?'• '+esc(state.topic):'• Overall Mock'}</b><div><span id="time">${fmt(state.secs)}</span> &nbsp; <button class="btn secondary" onclick="confirmSubmit()">Submit</button></div></div></div><div class="wrap exam"><main class="card qcard"><div class="source">Question ${state.i+1}/${state.qs.length} • ${esc(q.source)} • Source Q${q.qno}</div><h2>Question ${state.i+1}</h2><div class="qtext">${esc(q.question)}</div>
+function renderExam(){if(!state||state.submitted)return;let q=state.qs[state.i],a=state.answers[q.id];document.body.innerHTML=`<div class="topbar"><div class="topinner"><b>AZ-104 ${state.topic?'• '+esc(state.topic):'• Overall Mock'}</b><div><span id="time">${fmt(state.secs)}</span> &nbsp; <button class="btn secondary" onclick="confirmSubmit()">Submit</button></div></div></div><div class="wrap exam"><main class="card qcard"><div class="source">Question ${state.i+1}/${state.qs.length} • ${esc(q.source)} • Source Q${q.qno}</div><h2>Question ${state.i+1}</h2><div class="qtext">${esc(q.question)}</div>
 ${q.visualImages?.length?`<div class="visualWrap mockVisual">${q.visualImages.map((src,i)=>`<img class="visualQ" src="${src}" alt="Question visual ${i+1} for ${esc(q.id)}">`).join('')}<div class="source">Question visuals • source answer hidden</div></div>`:(q.visualImage?`<div class="visualWrap mockVisual"><img class="visualQ" src="${q.visualImage}" alt="Question visual"><div class="source">Question visual • answer hidden</div></div>`:'')}
 <div id="opts">${optionsHtml(q,a)}</div><div class="toolbar"><button class="btn secondary" onclick="prev()">← Previous</button><button class="btn secondary" onclick="toggleReview()">${state.review[q.id]?'✓ Marked':'Mark for review'}</button><button class="btn" onclick="next()">Next →</button></div></main><aside class="card side"><h3>Question Palette</h3><div class="palette">${state.qs.map((x,i)=>`<button class="pbtn ${i===state.i?'current':''} ${state.answers[x.id]!==undefined?'done':''} ${state.review[x.id]?'review':''}" onclick="go(${i})">${i+1}</button>`).join('')}</div><p class="muted">Outlined = current<br>Green border = answered<br>Gold bar = review</p></aside></div>`}
 function optionsHtml(q,a){if(!q.options?.length)return q.visualImage
  ? `<div class="visual-mock-note"><strong>Visual response</strong><p>Review the visual above. This source item does not yet expose a machine-readable click/drag target, so it will never be falsely marked correct.</p></div>`
  : `<div class="visual-mock-note"><strong>Source-format question</strong><p>This source item has no separate visual asset in this build.</p></div>`;let multi=Array.isArray(q.answer);return q.options.map((o,i)=>`<button class="option ${(multi?(a||[]).includes(i):a===i)?'selected':''}" onclick="choose(${i},${multi})"><b>${String.fromCharCode(65+i)}.</b> ${esc(o)}</button>`).join('')}
-function choose(i,multi){let q=state.qs[state.i];if(multi){let a=state.answers[q.id]||[];a=a.includes(i)?a.filter(x=>x!==i):[...a,i];state.answers[q.id]=a}else state.answers[q.id]=i;renderExam()}
-function next(){if(state.i<state.qs.length-1)state.i++;renderExam()} function prev(){if(state.i>0)state.i--;renderExam()} function go(i){state.i=i;renderExam()} function toggleReview(){let id=state.qs[state.i].id;state.review[id]=!state.review[id];renderExam()}
+function choose(i,multi){if(!state||state.submitted)return;let q=state.qs[state.i];if(multi){let a=state.answers[q.id]||[];a=a.includes(i)?a.filter(x=>x!==i):[...a,i];state.answers[q.id]=a}else state.answers[q.id]=i;renderExam()}
+function next(){if(!state||state.submitted)return;if(state.i<state.qs.length-1)state.i++;renderExam()} function prev(){if(!state||state.submitted)return;if(state.i>0)state.i--;renderExam()} function go(i){if(!state||state.submitted)return;state.i=i;renderExam()} function toggleReview(){if(!state||state.submitted)return;let id=state.qs[state.i].id;state.review[id]=!state.review[id];renderExam()}
 
 function isAnsweredValue(a){
   return Array.isArray(a) ? a.length>0 : a!==undefined && a!==null && a!=='';
@@ -69,6 +69,7 @@ function same(a,b){
 }
 function ansText(q,a){if(a===undefined)return 'Unanswered';let ar=Array.isArray(a)?a:[a];return ar.map(i=>q.options?.[i]?String.fromCharCode(65+i)+'. '+q.options[i]:String.fromCharCode(65+i)).join('; ')}
 function confirmSubmit(){
+  if(!state||state.submitted||isSubmitting) return;
   let answered=state.qs.filter(q=>isAnsweredValue(state.answers[q.id])).length;
   let left=state.qs.length-answered;
   if(left>0){
@@ -77,9 +78,11 @@ function confirmSubmit(){
   finalSubmit();
 }
 async function finalSubmit(){
-  if(isSubmitting) return;
+  if(isSubmitting||!state||state.submitted) return;
   isSubmitting=true;
+  state.submitted=true;
   clearInterval(timer);
+  timer=null;
   let correct=0,answered=0;
   state.qs.forEach(q=>{
     let a=state.answers[q.id];
@@ -90,6 +93,7 @@ async function finalSubmit(){
   let pct=total?Math.round(correct/total*100):0;
   const timeTaken=Math.max(0,3600-state.secs);
   const resultPayload={attemptId:(crypto.randomUUID?crypto.randomUUID():Date.now()+'-'+Math.random().toString(16).slice(2)),submittedAt:new Date().toISOString(),name:student?.name||'',email:student?.email||'',exam:state.topic||'Overall AZ-104 Mock',score:correct,total,percentage:pct,correct,wrong,unanswered,timeTakenSeconds:timeTaken,timeTakenMinutes:Math.ceil(timeTaken/60)};
+  shell(`<section class="hero submitting"><span class="badge">Submitting mock</span><h1>Finishing your exam…</h1><p>Please wait while your result is saved. Answers and navigation are now locked.</p></section>`);
   const saveStatus=await sendResult(resultPayload);
   shell(`<section class="hero"><span class="badge">Mock completed</span><h1>${correct}/${total}</h1><p>${pct}% score</p>
   <div class="stats">
