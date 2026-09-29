@@ -1,8 +1,22 @@
 # AZ-104 Practice Hub
 
-A browser-based Microsoft Azure Administrator (AZ-104) practice platform maintained by **Manav Jagtap**.
+[![HTML5](https://img.shields.io/badge/HTML5-Web-E34F26?style=flat-square&logo=html5&logoColor=white)](https://developer.mozilla.org/en-US/docs/Web/HTML)
+[![CSS3](https://img.shields.io/badge/CSS3-Responsive-1572B6?style=flat-square&logo=css3&logoColor=white)](https://developer.mozilla.org/en-US/docs/Web/CSS)
+[![JavaScript](https://img.shields.io/badge/JavaScript-Vanilla-F7DF1E?style=flat-square&logo=javascript&logoColor=black)](https://developer.mozilla.org/en-US/docs/Web/JavaScript)
+[![Cloudflare Pages](https://img.shields.io/badge/Deployed%20on-Cloudflare%20Pages-F38020?style=flat-square&logo=cloudflare&logoColor=white)](https://az104-practice-hub.pages.dev/)
 
-The project provides topic-wise mock exams, an overall AZ-104 mock exam, normal question practice, a dedicated visual question bank, answer review, and student result tracking.
+A browser-based Microsoft Azure Administrator (AZ-104) practice platform with topic-wise mock exams, visual-question practice, answer review, and student result tracking.
+
+[Open Live Demo](https://az104-practice-hub.pages.dev/) • [View Source](https://github.com/manav-jagtap/az104-practice-hub)
+
+## Engineering Highlights
+
+- 1,273 source records organized across five AZ-104 domains
+- Separate Normal and Visual question banks for reliable practice workflows
+- Dedicated topic mock pools with timed 50-mark assessments
+- Question palette, mark-for-review, unanswered tracking, and answer review
+- Google Apps Script and Google Sheets result tracking
+- Responsive browser interface deployed through Cloudflare Pages
 
 ## Features
 
@@ -24,7 +38,7 @@ The project provides topic-wise mock exams, an overall AZ-104 mock exam, normal 
 - Student Name and Email entry
 - Automatic student result tracking using Google Sheets
 - Responsive interface
-- GitHub Pages compatible
+- Cloudflare Pages deployment
 
 ## Question Bank
 
@@ -134,7 +148,7 @@ The result sheet is maintained separately from the public website.
 - Google Sheets
 - Git
 - GitHub
-- GitHub Pages
+- Cloudflare Pages
 
 ## Project Structure
 
@@ -165,15 +179,17 @@ No backend server or build process is required for the main website.
 3. Open `index.html` in a modern web browser.
 4. Start practicing.
 
-## Deploy on GitHub Pages
+## Deployment
 
-1. Open the GitHub repository.
-2. Go to **Settings → Pages**.
-3. Under **Build and deployment**, select **Deploy from a branch**.
-4. Select the `main` branch.
-5. Select `/ (root)`.
-6. Save the configuration.
-7. GitHub Pages will publish the website and provide the live URL.
+The live site is deployed with **Cloudflare Pages** from the GitHub `main` branch.
+
+Production flow:
+
+```text
+Local development → GitHub → Cloudflare Pages → Live website
+```
+
+Cloudflare Pages automatically publishes updates after changes are pushed to the connected production branch.
 
 ## Data and Content Note
 
